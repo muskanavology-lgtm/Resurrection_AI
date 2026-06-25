@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  background: #050810;
+  color: #e7ebf3;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 12% 8%, rgba(34, 211, 238, 0.14), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(139, 92, 246, 0.14), transparent 42%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Focus visibility for accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.text-gradient {
+  background-image: linear-gradient(90deg, #22d3ee, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* markdown content inside AI responses */
+.prose-ai p {
+  margin-bottom: 0.85em;
+  line-height: 1.7;
+}
+.prose-ai h1,
+.prose-ai h2,
+.prose-ai h3 {
+  font-weight: 700;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  color: #fff;
+}
+.prose-ai ul,
+.prose-ai ol {
+  margin: 0.5em 0 0.85em 1.25em;
+}
+.prose-ai li {
+  margin-bottom: 0.35em;
+  line-height: 1.6;
+}
+.prose-ai code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: "JetBrains Mono", monospace;
+}
+.prose-ai pre {
+  background: #060a14;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1em;
+  overflow-x: auto;
+  margin: 0.85em 0;
+}
+.prose-ai pre code {
+  background: none;
+  padding: 0;
+}
+.prose-ai strong {
+  color: #fff;
+}

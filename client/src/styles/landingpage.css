@@ -1,0 +1,35 @@
+custom-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Premium Gradient Text Effect */
+.gradient-text {
+  background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+
+/* Modern Glowing Button Styles */
+.cta-button {
+  background: #22d3ee;
+  color: #020617;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.25);
+}
+
+.cta-button:hover {
+  background: #06b6d4;
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
+}
+
+.cta-button:active {
+  transform: translateY(0);
+}

@@ -1,0 +1,234 @@
+:root{
+  --bg-primary:#020617;
+  --bg-secondary:#0f172a;
+  --bg-card:#111827;
+
+  --cyan:#00E5FF;
+  --purple:#8B5CF6;
+
+  --text:#ffffff;
+  --text-muted:#94A3B8;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  font-family:
+  Inter,
+  sans-serif;
+
+  background:
+  var(--bg-primary);
+
+  color:
+  var(--text);
+
+  overflow-x:hidden;
+}
+
+/* Glass Card */
+
+.glass{
+  background:
+  rgba(255,255,255,0.05);
+
+  backdrop-filter:
+  blur(20px);
+
+  border:
+  1px solid rgba(
+    255,
+    255,
+    255,
+    0.1
+  );
+
+  border-radius:
+  20px;
+}
+
+/* Glow Border */
+
+.glow-border{
+  border:
+  1px solid rgba(
+    0,
+    229,
+    255,
+    0.3
+  );
+
+  box-shadow:
+  0 0 30px
+  rgba(
+    0,
+    229,
+    255,
+    0.15
+  );
+}
+
+/* Dashboard Card */
+
+.dashboard-card{
+
+  background:
+  #111827;
+
+  border-radius:
+  24px;
+
+  padding:
+  24px;
+
+  transition:
+  all .3s ease;
+
+}
+
+.dashboard-card:hover{
+
+  transform:
+  translateY(-6px);
+
+  box-shadow:
+  0 15px 40px
+  rgba(
+    0,
+    229,
+    255,
+    0.15
+  );
+
+}
+
+/* Neon Text */
+
+.neon-text{
+
+  color:
+  #00E5FF;
+
+  text-shadow:
+  0 0 20px
+  rgba(
+    0,
+    229,
+    255,
+    0.7
+  );
+
+}
+
+/* Gradient Text */
+
+.gradient-text{
+
+background:
+linear-gradient(
+90deg,
+#00E5FF,
+#8B5CF6
+);
+
+-webkit-background-clip:
+text;
+
+-webkit-text-fill-color:
+transparent;
+
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar{
+  width:8px;
+}
+
+::-webkit-scrollbar-track{
+  background:#111827;
+}
+
+::-webkit-scrollbar-thumb{
+  background:#00E5FF;
+  border-radius:10px;
+}
+
+/* Floating Animation */
+
+@keyframes float{
+
+0%{
+transform:
+translateY(0px);
+}
+
+50%{
+transform:
+translateY(-10px);
+}
+
+100%{
+transform:
+translateY(0px);
+}
+
+}
+
+.float{
+animation:
+float 4s ease-in-out infinite;
+}
+
+/* Pulse Glow */
+
+@keyframes pulseGlow{
+
+0%{
+box-shadow:
+0 0 0px
+rgba(
+0,
+229,
+255,
+0.3
+);
+}
+
+50%{
+box-shadow:
+0 0 40px
+rgba(
+0,
+229,
+255,
+0.8
+);
+}
+
+100%{
+box-shadow:
+0 0 0px
+rgba(
+0,
+229,
+255,
+0.3
+);
+}
+
+}
+
+.pulse-glow{
+animation:
+pulseGlow
+3s infinite;
+}
