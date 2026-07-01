@@ -1,51 +1,30 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-const routes = [];
+function extractRoutes(projectPathOrTree) {
+  const routes = [];
 
-function scanDirectory(dir) {
-  const files = fs.readdirSync(dir);
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
+  const regex = /router\.(get|post|put|delete|patch)\s*\(\s*["'`](.*?)["'`]/g;
+  // Laravel-style route definitions: Route::get('/path', ...)
+  const laravelRegex = /Route::(get|post|put|delete|patch)\s*\(\s*['"`](.*?)['"`]/g;
 
-    const stat = fs.statSync(fullPath);
+  for (const file of tree) {
+    if (![".js", ".ts", ".php"].includes(file.ext) || !file.content) continue;
+    const content = file.content;
+    let match;
 
-    if (stat.isDirectory()) {
-      scanDirectory(fullPath);
-    } else {
-      if (
-        file.endsWith(".js") ||
-        file.endsWith(".ts")
-      ) {
-        try {
-          const content = fs.readFileSync(
-            fullPath,
-            "utf8"
-          );
+    while ((match = regex.exec(content)) !== null) {
+      routes.push({ method: match[1].toUpperCase(), path: match[2], file: file.relativePath });
+    }
 
-          const regex =
-            /router\.(get|post|put|delete|patch)\s*\(\s*["'`](.*?)["'`]/g;
-
-          let match;
-
-          while ((match = regex.exec(content)) !== null) {
-            routes.push({
-              method: match[1].toUpperCase(),
-              path: match[2],
-              file
-            });
-          }
-        } catch (err) {}
-      }
+    while ((match = laravelRegex.exec(content)) !== null) {
+      routes.push({ method: match[1].toUpperCase(), path: match[2], file: file.relativePath });
     }
   }
-}
-
-function extractRoutes(projectPath) {
-  routes.length = 0;
-
-  scanDirectory(projectPath);
 
   return routes;
 }

@@ -9,6 +9,8 @@ import RepositorySearch from "../pages/RepositorySearch";
 import KnowledgeGraph from "../pages/KnowledgeGraph";
 import ImpactSimulator from "../pages/ImpactSimulator";
 import ReadmePage from "../pages/ReadmePage";
+import CodeGenerator from "../pages/CodeGenerator";
+import DocPlanner from "../pages/DocPlanner";
 
 export default function AppRoutes() {
   return (
@@ -24,6 +26,8 @@ export default function AppRoutes() {
       <Route path="/graph" element={<KnowledgeGraph />} />
       <Route path="/impact" element={<ImpactSimulator />} />
       <Route path="/readme" element={<ReadmePage />} />
+      <Route path="/code-generator" element={<CodeGenerator />} />
+      <Route path="/doc-planner" element={<DocPlanner />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

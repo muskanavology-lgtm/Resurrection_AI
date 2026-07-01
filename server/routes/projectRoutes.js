@@ -3,24 +3,6 @@ const router = express.Router();
 const projectComparator = require("../analyzers/projectComparator");
 const Project = require("../models/Project");
 const ChatSession = require("../models/ChatSession");
-
-/*
-  ⚠️ IMPORTANT FIX (read this comment block):
-  Pehle "/:id" route sabse upar tha. Express routes ko TOP-TO-BOTTOM order mein
-  match karta hai, aur "/:id" EK SINGLE WORD wale kisi bhi path ko pakad leta tha —
-  jaise "/api/projects" bhi isi route se match ho raha tha (id = "projects"),
-  jiski wajah se Project.findById("projects") fail hota tha aur list kabhi
-  return hi nahi hoti thi.
-
-  FIX: saari specific named routes (jaise /projects, /project/:id, /security/:id
-  wagera) ko UPAR rakha hai, aur generic "/:id" ko sabse NEECHE/end mein.
-  Isse koi bhi specific route "/:id" ke trap mein nahi aayega.
-
-  Maine sirf ORDER change kiya hai — koi bhi logic, field name, ya response
-  shape nahi badla. Saare existing endpoints same tarike se kaam karenge.
-*/
-
-// ===================== LIST ALL PROJECTS (moved up, now reachable) =====================
 router.get("/projects", async (req, res) => {
   try {
     const projects = await Project.find({}).sort({ createdAt: -1 });
@@ -35,8 +17,6 @@ router.get("/projects", async (req, res) => {
     });
   }
 });
-
-// ===================== SINGLE PROJECT (both singular + plural kept for compatibility) =====================
 router.get("/project/:id", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -76,7 +56,6 @@ router.delete("/projects/:id", async (req, res) => {
   }
 });
 
-// ===================== ALL REPORT SUB-ROUTES =====================
 router.get("/security/:id", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -328,7 +307,6 @@ router.get("/resurrection/:id", async (req, res) => {
   }
 });
 
-// ===================== GENERIC CATCH-ALL (MUST STAY LAST) =====================
 router.get("/:id", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);

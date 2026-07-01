@@ -1,6 +1,6 @@
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import { motion } from "framer-motion";
-import { FiAlertTriangle, FiInbox } from "react-icons/fi";
+import { FiAlertTriangle, FiInbox, FiCopy, FiCheck } from "react-icons/fi";
 
 export const Panel = forwardRef(function Panel({ children, className = "", ...props }, ref) {
   return (
@@ -171,6 +171,35 @@ export function ProgressRing({ value = 0, size = 96, stroke = 8, label, color = 
   );
 }
 
+export function CodeBlock({ code, language = "javascript", filePath }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 overflow-hidden bg-[#060a14]">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.03] border-b border-white/8">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="mono text-xs text-cyan-300 truncate">{filePath || language}</span>
+        </div>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors shrink-0"
+        >
+          {copied ? <FiCheck size={13} className="text-emerald-400" /> : <FiCopy size={13} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="p-4 overflow-x-auto text-sm mono text-slate-200 leading-relaxed">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
 export function Bar({ value = 0, max = 100, color = "bg-cyan-400" }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   return (

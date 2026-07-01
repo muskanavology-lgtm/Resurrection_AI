@@ -1,81 +1,32 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-function flowAnalyzer(projectPath) {
-
+function flowAnalyzer(projectPathOrTree) {
   const flow = {
     frontend: [],
     routes: [],
     controllers: [],
     services: [],
     models: [],
-    database: []
+    database: [],
   };
 
-  function walk(dir) {
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-    const files = fs.readdirSync(dir);
+  for (const file of tree) {
+    const lower = file.relativePath.toLowerCase();
 
-    for (const file of files) {
-
-      const fullPath =
-        path.join(dir, file);
-
-      const stat =
-        fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        walk(fullPath);
-      }
-      else {
-
-        const lower =
-          fullPath.toLowerCase();
-
-        if (
-          lower.includes("component") ||
-          lower.includes("page")
-        ) {
-          flow.frontend.push(file);
-        }
-
-        if (
-          lower.includes("route")
-        ) {
-          flow.routes.push(file);
-        }
-
-        if (
-          lower.includes("controller")
-        ) {
-          flow.controllers.push(file);
-        }
-
-        if (
-          lower.includes("service")
-        ) {
-          flow.services.push(file);
-        }
-
-        if (
-          lower.includes("model")
-        ) {
-          flow.models.push(file);
-        }
-
-        if (
-          lower.includes("schema")
-        ) {
-          flow.database.push(file);
-        }
-      }
-    }
+    if (lower.includes("component") || lower.includes("page")) flow.frontend.push(file.name);
+    if (lower.includes("route")) flow.routes.push(file.name);
+    if (lower.includes("controller")) flow.controllers.push(file.name);
+    if (lower.includes("service")) flow.services.push(file.name);
+    if (lower.includes("model")) flow.models.push(file.name);
+    if (lower.includes("schema")) flow.database.push(file.name);
   }
-
-  walk(projectPath);
 
   return flow;
 }
 
-module.exports =
-flowAnalyzer;
+module.exports = flowAnalyzer;

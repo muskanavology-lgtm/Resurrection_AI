@@ -7,6 +7,7 @@ const dns = require('node:dns');
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 // Routes Imports
+const docPlanRoutes = require("./routes/docPlanRoutes");
 const executionFlowRoutes = require("./routes/executionFlowRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
@@ -75,7 +76,7 @@ const startServer = async () => {
   app.use("/api", copilotRoutes);
   app.use("/api", codeGeneratorRoutes);
   app.use("/api", healthRoutes);
-
+app.use("/api/docs", docPlanRoutes);
   app.get("/", (req, res) => {
     res.json({ success: true, message: "Project Resurrection AI API Running" });
   });

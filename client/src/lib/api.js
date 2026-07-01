@@ -108,6 +108,34 @@ export const simulateFeatureImpact = (id, feature) =>
   api.post(`/api/feature-impact/${id}`, { feature });
 
 /* ---------------------------------------------------------------------- */
+/*  CODE GENERATOR (Claude-style) — POST /api/generate-code/:id { feature }*/
+/*  Returns actual working code files, not just suggestions.              */
+/* ---------------------------------------------------------------------- */
+
+export const generateFeatureCode = (id, feature) =>
+  api.post(`/api/generate-code/${id}`, { feature });
+
+/* ---------------------------------------------------------------------- */
+/*  DOCUMENTATION-ONLY PROJECT PLANNER                                    */
+/*  POST /api/docplan/plan-from-doc  (multipart, field "docFile")         */
+/* ---------------------------------------------------------------------- */
+
+export function generatePlanFromDoc(file, onProgress) {
+  const formData = new FormData();
+  formData.append("docFile", file);
+  return api.post("/api/docplan/plan-from-doc", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: (evt) => {
+      if (onProgress && evt.total) {
+        onProgress(Math.round((evt.loaded * 100) / evt.total));
+      }
+    },
+  });
+}
+
+export const getDocPlan = (id) => api.get(`/api/docplan/plan/${id}`);
+
+/* ---------------------------------------------------------------------- */
 /*  CTO REPORT — GET /api/cto-report/:id (slow, live LLM call)            */
 /* ---------------------------------------------------------------------- */
 

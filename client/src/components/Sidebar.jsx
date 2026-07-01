@@ -9,6 +9,9 @@ import {
   FiGitBranch,
   FiFileText,
   FiZap,
+  FiCode,
+  FiEdit3,
+  FiBookOpen,
 } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import { useActiveProject } from "../lib/ProjectContext";
@@ -16,6 +19,7 @@ import { useActiveProject } from "../lib/ProjectContext";
 const menu = [
   { name: "Dashboard", icon: FiHome, path: "/dashboard", needsProject: false },
   { name: "Upload", icon: FiUpload, path: "/upload", needsProject: false },
+  { name: "Plan from Docs", icon: FiEdit3, path: "/doc-planner", needsProject: false },
   { name: "Architecture", icon: FiCpu, path: "/architecture", needsProject: true },
   { name: "Security", icon: FiShield, path: "/security", needsProject: true },
   { name: "Health", icon: FiActivity, path: "/health", needsProject: true },
@@ -23,6 +27,7 @@ const menu = [
   { name: "Repository Search", icon: FiSearch, path: "/search", needsProject: true },
   { name: "Knowledge Graph", icon: FiGitBranch, path: "/graph", needsProject: true },
   { name: "Impact Simulator", icon: FiZap, path: "/impact", needsProject: true },
+  { name: "Code Generator", icon: FiCode, path: "/code-generator", needsProject: true },
   { name: "README", icon: FiFileText, path: "/readme", needsProject: true },
 ];
 

@@ -1,174 +1,45 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-function executionFlowAnalyzer(projectPath) {
-
+function executionFlowAnalyzer(projectPathOrTree) {
   const flow = [];
 
-  function walk(dir) {
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-    const files = fs.readdirSync(dir);
+  for (const file of tree) {
+    const lower = file.name.toLowerCase();
+    const content = file.content || "";
 
-    for (const file of files) {
-
-      const fullPath =
-        path.join(dir, file);
-
-      const stat =
-        fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        walk(fullPath);
-        continue;
-      }
-
-      const lower =
-        file.toLowerCase();
-
-      try {
-
-        const content =
-          fs.readFileSync(
-            fullPath,
-            "utf8"
-          );
-
-        // Express Routes
-
-        if (
-          content.includes("router.") ||
-          content.includes("express.Router")
-        ) {
-
-          flow.push({
-            type: "Route",
-            file
-          });
-
-        }
-
-        // Controllers
-
-        if (
-          lower.includes("controller")
-        ) {
-
-          flow.push({
-            type: "Controller",
-            file
-          });
-
-        }
-
-        // Services
-
-        if (
-          lower.includes("service")
-        ) {
-
-          flow.push({
-            type: "Service",
-            file
-          });
-
-        }
-
-        // Models
-
-        if (
-          lower.includes("model")
-        ) {
-
-          flow.push({
-            type: "Model",
-            file
-          });
-
-        }
-
-        // React
-
-        if (
-          file.endsWith(".jsx") ||
-          file.endsWith(".tsx")
-        ) {
-
-          flow.push({
-            type:
-              "React Component",
-            file
-          });
-
-        }
-
-        // HTML
-
-        if (
-          file.endsWith(".html")
-        ) {
-
-          flow.push({
-            type:
-              "Frontend Page",
-            file
-          });
-
-        }
-
-        // PHP
-
-        if (
-          file.endsWith(".php")
-        ) {
-
-          flow.push({
-            type:
-              "PHP Module",
-            file
-          });
-
-        }
-
-        // Python
-
-        if (
-          file.endsWith(".py")
-        ) {
-
-          flow.push({
-            type:
-              "Python Module",
-            file
-          });
-
-        }
-
-        // Java
-
-        if (
-          file.endsWith(".java")
-        ) {
-
-          flow.push({
-            type:
-              "Java Class",
-            file
-          });
-
-        }
-
-      }
-      catch (err) {}
-
+    if (content.includes("router.") || content.includes("express.Router")) {
+      flow.push({ type: "Route", file: file.relativePath });
     }
-
+    if (lower.includes("controller")) {
+      flow.push({ type: "Controller", file: file.relativePath });
+    }
+    if (lower.includes("service")) {
+      flow.push({ type: "Service", file: file.relativePath });
+    }
+    if (lower.includes("model")) {
+      flow.push({ type: "Model", file: file.relativePath });
+    }
+    if (file.ext === ".jsx" || file.ext === ".tsx") {
+      flow.push({ type: "React Component", file: file.relativePath });
+    }
+    if (file.ext === ".html" || file.ext === ".htm") {
+      flow.push({ type: "Frontend Page", file: file.relativePath });
+    }
+    if (file.ext === ".php") {
+      flow.push({ type: "PHP Module", file: file.relativePath });
+    }
+    if (file.ext === ".py") {
+      flow.push({ type: "Python Module", file: file.relativePath });
+    }
+    if (file.ext === ".java") {
+      flow.push({ type: "Java Class", file: file.relativePath });
+    }
   }
-
-  walk(projectPath);
-
   return flow;
-
 }
-
-module.exports =
-executionFlowAnalyzer;
+module.exports = executionFlowAnalyzer;

@@ -1,115 +1,40 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-function schemaVisualizer(projectPath) {
-
+function schemaVisualizer(projectPathOrTree) {
   const result = {
-
     collections: [],
     tables: [],
-    relationships: []
-
+    relationships: [],
   };
 
-  function walk(dir) {
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-    const files =
-      fs.readdirSync(dir);
+  const modelRegex = /mongoose\.model\s*\(\s*['"`](.*?)['"`]/g;
+  const sqlRegex = /CREATE TABLE ([a-zA-Z0-9_]+)/gi;
+  const refRegex = /ref\s*:\s*['"`](.*?)['"`]/g;
 
-    for (const file of files) {
+  for (const file of tree) {
+    if (!file.content) continue;
+    const content = file.content;
+    let match;
 
-      const fullPath =
-        path.join(dir, file);
-
-      const stat =
-        fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-
-        walk(fullPath);
-
-      } else {
-
-        try {
-
-          const content =
-            fs.readFileSync(
-              fullPath,
-              "utf8"
-            );
-
-          // Mongoose Model
-
-          const modelRegex =
-            /mongoose\.model\s*\(\s*['"`](.*?)['"`]/g;
-
-          let match;
-
-          while (
-            (match =
-              modelRegex.exec(content))
-          ) {
-
-            result.collections.push(
-              match[1]
-            );
-
-          }
-
-          // SQL Tables
-
-          const sqlRegex =
-            /CREATE TABLE ([a-zA-Z0-9_]+)/gi;
-
-          while (
-            (match =
-              sqlRegex.exec(content))
-          ) {
-
-            result.tables.push(
-              match[1]
-            );
-
-          }
-
-          // References
-
-          const refRegex =
-            /ref\s*:\s*['"`](.*?)['"`]/g;
-
-          while (
-            (match =
-              refRegex.exec(content))
-          ) {
-
-            result.relationships.push({
-
-              from:
-                file,
-
-              to:
-                match[1],
-
-              type:
-                "belongsTo"
-
-            });
-
-          }
-
-        }
-        catch (err) {}
-
-      }
-
+    while ((match = modelRegex.exec(content))) {
+      result.collections.push(match[1]);
     }
 
-  }
+    while ((match = sqlRegex.exec(content))) {
+      result.tables.push(match[1]);
+    }
 
-  walk(projectPath);
+    while ((match = refRegex.exec(content))) {
+      result.relationships.push({ from: file.relativePath, to: match[1], type: "belongsTo" });
+    }
+  }
 
   return result;
 }
 
-module.exports =
-schemaVisualizer;
+module.exports = schemaVisualizer;

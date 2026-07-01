@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 const titles = {
   "/dashboard": "Overview",
   "/upload": "Upload Repository",
+  "/doc-planner": "Documentation Planner",
   "/architecture": "Architecture",
   "/security": "Security Report",
   "/health": "Repository Health",
@@ -10,6 +11,7 @@ const titles = {
   "/search": "Repository Search",
   "/graph": "Knowledge Graph",
   "/impact": "Feature Impact Simulator",
+  "/code-generator": "Code Generator",
   "/readme": "README Generator",
 };
 

@@ -1,131 +1,47 @@
-const fs = require("fs");
-const path = require("path");
-
-function productionReadinessAnalyzer(projectPath) {
-
+const { buildFileTree } = require("../utils/fileTreeCache");
+function productionReadinessAnalyzer(projectPathOrTree) {
   const report = {
-
     score: 100,
-
     productionReady: true,
-
     checks: {
-
       helmet: false,
       cors: false,
       logging: false,
       rateLimiting: false,
-      envVariables: false
-
+      envVariables: false,
     },
-
-    missing: []
-
+    missing: [],
   };
-
-  function walk(dir) {
-
-    const files =
-      fs.readdirSync(dir);
-
-    for (const file of files) {
-
-      const fullPath =
-        path.join(dir,file);
-
-      const stat =
-        fs.statSync(fullPath);
-
-      if(stat.isDirectory()){
-
-        walk(fullPath);
-
-      }else{
-
-        try{
-
-          const content =
-            fs.readFileSync(
-              fullPath,
-              "utf8"
-            );
-
-          if(content.includes("helmet("))
-            report.checks.helmet=true;
-
-          if(content.includes("cors("))
-            report.checks.cors=true;
-
-          if(content.includes("morgan("))
-            report.checks.logging=true;
-
-          if(
-            content.includes("rateLimit(")
-          )
-            report.checks.rateLimiting=true;
-
-          if(
-            content.includes("process.env")
-          )
-            report.checks.envVariables=true;
-
-        }
-        catch(err){}
-
-      }
-
-    }
-
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
+  for (const file of tree) {
+    if (!file.content) continue;
+    const content = file.content;
+    if (content.includes("helmet(")) report.checks.helmet = true;
+    if (content.includes("cors(")) report.checks.cors = true;
+    if (content.includes("morgan(")) report.checks.logging = true;
+    if (content.includes("rateLimit(")) report.checks.rateLimiting = true;
+    if (content.includes("process.env")) report.checks.envVariables = true;
   }
-
-  walk(projectPath);
-
-  if(!report.checks.helmet){
-
-    report.score-=10;
-
-    report.missing.push(
-      "Helmet Security"
-    );
-
+  if (!report.checks.helmet) {
+    report.score -= 10;
+    report.missing.push("Helmet Security");
   }
-
-  if(!report.checks.logging){
-
-    report.score-=10;
-
-    report.missing.push(
-      "Morgan Logging"
-    );
-
+  if (!report.checks.logging) {
+    report.score -= 10;
+    report.missing.push("Morgan Logging");
   }
-
-  if(!report.checks.rateLimiting){
-
-    report.score-=15;
-
-    report.missing.push(
-      "Rate Limiter"
-    );
-
+  if (!report.checks.rateLimiting) {
+    report.score -= 15;
+    report.missing.push("Rate Limiter");
   }
-
-  if(!report.checks.envVariables){
-
-    report.score-=20;
-
-    report.missing.push(
-      "Environment Variables"
-    );
-
+  if (!report.checks.envVariables) {
+    report.score -= 20;
+    report.missing.push("Environment Variables");
   }
-
-  report.productionReady =
-    report.score >= 70;
-
+  report.productionReady = report.score >= 70;
   return report;
-
 }
-
-module.exports =
-productionReadinessAnalyzer;
+module.exports = productionReadinessAnalyzer;

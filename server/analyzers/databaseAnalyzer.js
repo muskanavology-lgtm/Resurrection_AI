@@ -1,62 +1,52 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-function databaseAnalyzer(projectPath) {
-
+function databaseAnalyzer(projectPathOrTree) {
   const result = {
     collections: [],
-    tables: []
+    tables: [],
+    type: "Unknown",
   };
 
-  function scan(dir) {
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-    const files = fs.readdirSync(dir);
+  const mongoRegex = /mongoose\.model\s*\(\s*["'`](.*?)["'`]/g;
+  const sqlCreateRegex = /CREATE\s+TABLE\s+(?:IF NOT EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/gi;
+  // Laravel migrations: Schema::create('table_name', ...)
+  const laravelSchemaRegex = /Schema::create\s*\(\s*['"]([a-zA-Z0-9_]+)['"]/g;
+  // Eloquent models: protected $table = 'table_name';
+  const eloquentTableRegex = /\$table\s*=\s*['"]([a-zA-Z0-9_]+)['"]/g;
 
-    for (const file of files) {
+  for (const file of tree) {
+    if (!file.content) continue;
+    const content = file.content;
+    let match;
 
-      const fullPath = path.join(dir, file);
-      const stat = fs.statSync(fullPath);
+    while ((match = mongoRegex.exec(content))) {
+      result.collections.push(match[1]);
+      result.type = "MongoDB";
+    }
 
-      if (stat.isDirectory()) {
-        scan(fullPath);
-      } else {
+    while ((match = sqlCreateRegex.exec(content))) {
+      result.tables.push(match[1]);
+      if (result.type === "Unknown") result.type = "SQL";
+    }
 
-        try {
+    while ((match = laravelSchemaRegex.exec(content))) {
+      result.tables.push(match[1]);
+      result.type = "MySQL (Laravel)";
+    }
 
-          const content = fs.readFileSync(
-            fullPath,
-            "utf8"
-          );
-
-          // MongoDB Models
-          const mongoRegex =
-            /mongoose\.model\s*\(\s*["'`](.*?)["'`]/g;
-
-          let match;
-
-          while (
-            (match = mongoRegex.exec(content))
-          ) {
-            result.collections.push(match[1]);
-          }
-
-          // SQL Tables
-          const sqlRegex =
-            /CREATE\s+TABLE\s+([a-zA-Z0-9_]+)/gi;
-
-          while (
-            (match = sqlRegex.exec(content))
-          ) {
-            result.tables.push(match[1]);
-          }
-
-        } catch (err) {}
-
-      }
+    while ((match = eloquentTableRegex.exec(content))) {
+      result.tables.push(match[1]);
+      if (result.type === "Unknown") result.type = "MySQL (Laravel)";
     }
   }
 
-  scan(projectPath);
+  result.collections = [...new Set(result.collections)];
+  result.tables = [...new Set(result.tables)];
 
   return result;
 }

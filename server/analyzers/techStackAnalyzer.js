@@ -1,70 +1,85 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-function techStackAnalyzer(projectPath) {
+function techStackAnalyzer(projectPathOrTree) {
   const result = {
     frontend: [],
     backend: [],
     database: [],
     mobile: [],
     devops: [],
-    languages: []
+    languages: [],
   };
 
-  let hasPhp = false;
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-  function scan(dir) {
-    let files;
-    try { files = fs.readdirSync(dir); } catch(e) { return; }
+  for (const file of tree) {
+    if (file.ext === ".js") result.languages.push("JavaScript");
+    if (file.ext === ".ts") result.languages.push("TypeScript");
+    if (file.ext === ".php") result.languages.push("PHP");
+    if (file.ext === ".py") result.languages.push("Python");
+    if (file.ext === ".java") result.languages.push("Java");
+    if (file.ext === ".cs") result.languages.push("C#");
+    if (file.ext === ".go") result.languages.push("Go");
+    if (file.ext === ".dart") result.languages.push("Dart");
+    if (file.ext === ".liquid") result.languages.push("Liquid");
 
-    for (const file of files) {
-      const fullPath = path.join(dir, file);
-      let stat;
-      try { stat = fs.statSync(fullPath); } catch(e) { continue; }
+    if (file.name === "package.json" && file.content) {
+      try {
+        const pkg = JSON.parse(file.content);
+        const deps = { ...pkg.dependencies, ...pkg.devDependencies };
 
-      if (stat.isDirectory()) {
-        if (file === "node_modules" || file === ".git" || file === "vendor" || file === "assets") {
-          continue;
-        }
-        scan(fullPath);
-      } else {
-        if (file.endsWith(".php")) {
-          result.languages.push("PHP");
-          hasPhp = true;
-        }
-        if (file.endsWith(".js") || file.endsWith(".jsx")) result.languages.push("JavaScript");
-        if (file.endsWith(".ts") || file.endsWith(".tsx")) result.languages.push("TypeScript");
-        if (file.endsWith(".py")) result.languages.push("Python");
-        if (file.endsWith(".java")) result.languages.push("Java");
+        if (deps.react) result.frontend.push("React");
+        if (deps.next) result.frontend.push("Next.js");
+        if (deps.vue) result.frontend.push("Vue");
+        if (deps.angular || deps["@angular/core"]) result.frontend.push("Angular");
+
+        if (deps.express) result.backend.push("Express");
+        if (deps.nestjs || deps["@nestjs/core"]) result.backend.push("NestJS");
+
+        if (deps.mongodb || deps.mongoose) result.database.push("MongoDB");
+        if (deps.mysql || deps.mysql2) result.database.push("MySQL");
+        if (deps.pg) result.database.push("PostgreSQL");
+        if (deps.sqlite3) result.database.push("SQLite");
+
+        if (deps["react-native"]) result.mobile.push("React Native");
+        if (deps.flutter) result.mobile.push("Flutter");
+      } catch {
+        // malformed package.json
       }
+    }
+
+    if (file.name === "composer.json" && file.content) {
+      try {
+        const composer = JSON.parse(file.content);
+        const deps = { ...composer.require, ...composer["require-dev"] };
+        if (Object.keys(deps).some((d) => d.startsWith("laravel/"))) {
+          result.backend.push("Laravel");
+          result.database.push("MySQL");
+        }
+      } catch {
+        // malformed composer.json
+      }
+    }
+
+    if (file.name === "wp-config.php") {
+      result.backend.push("WordPress");
+      result.database.push("MySQL");
+    }
+
+    if (file.name === "Dockerfile" || file.name === "docker-compose.yml") {
+      result.devops.push("Docker");
     }
   }
 
-  scan(projectPath);
-
-  if (hasPhp) {
-    result.backend.push("PHP Native Engine");
-    // Default Core PHP projects mostly use MySQL/MariaDB
-    result.database.push("MySQL / PDO");
-  }
-
-  const packagePath = path.join(projectPath, "package.json");
-  if (fs.existsSync(packagePath)) {
-    try {
-      const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-
-      if (deps.react) result.frontend.push("React");
-      if (deps.next) result.frontend.push("Next.js");
-      if (!hasPhp && deps.express) result.backend.push("Express");
-      if (deps.mongodb || deps.mongoose) result.database.push("MongoDB");
-      if (deps.mysql) result.database.push("MySQL");
-    } catch(e){}
-  }
-
   result.languages = [...new Set(result.languages)];
+  result.frontend = [...new Set(result.frontend)];
   result.backend = [...new Set(result.backend)];
   result.database = [...new Set(result.database)];
+  result.mobile = [...new Set(result.mobile)];
+  result.devops = [...new Set(result.devops)];
 
   return result;
 }

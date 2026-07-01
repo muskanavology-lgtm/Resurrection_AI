@@ -1,80 +1,28 @@
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-const fs = require("fs");
-const path = require("path");
-
-function scanDependencies(projectPath) {
-
+function scanDependencies(projectPathOrTree) {
   const graph = {};
 
-  function walk(dir) {
+  const tree =
+    typeof projectPathOrTree === "string"
+      ? buildFileTree(projectPathOrTree).files
+      : projectPathOrTree.files || projectPathOrTree;
 
-    const files = fs.readdirSync(dir);
+  const codeExts = [".js", ".jsx", ".ts", ".tsx", ".php"];
+  const requireRegex = /require\(['"`](.*?)['"`]\)/g;
+  const importRegex = /from\s+['"`](.*?)['"`]/g;
 
-    for (const file of files) {
+  for (const file of tree) {
+    if (!codeExts.includes(file.ext) || !file.content) continue;
+    const content = file.content;
+    const imports = [];
+    let match;
 
-      const fullPath = path.join(dir, file);
+    while ((match = requireRegex.exec(content))) imports.push(match[1]);
+    while ((match = importRegex.exec(content))) imports.push(match[1]);
 
-      const stat = fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        walk(fullPath);
-      } else {
-
-        if (
-          file.endsWith(".js") ||
-          file.endsWith(".jsx") ||
-          file.endsWith(".ts") ||
-          file.endsWith(".tsx") ||
-          file.endsWith(".php")
-        ) {
-
-          try {
-
-            const content =
-              fs.readFileSync(
-                fullPath,
-                "utf8"
-              );
-
-            const imports = [];
-
-            const requireRegex =
-              /require\(['"`](.*?)['"`]\)/g;
-
-            const importRegex =
-              /from\s+['"`](.*?)['"`]/g;
-
-            let match;
-
-            while (
-              (match =
-                requireRegex.exec(content))
-            ) {
-              imports.push(match[1]);
-            }
-
-            while (
-              (match =
-                importRegex.exec(content))
-            ) {
-              imports.push(match[1]);
-            }
-
-            graph[fullPath] = imports;
-
-          } catch (err) {
-            console.log(err.message);
-          }
-
-        }
-
-      }
-
-    }
-
+    graph[file.fullPath] = imports;
   }
-
-  walk(projectPath);
 
   return graph;
 }

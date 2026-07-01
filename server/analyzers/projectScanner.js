@@ -1,7 +1,6 @@
-const fs = require("fs");
-const path = require("path");
+const { buildFileTree } = require("../utils/fileTreeCache");
 
-const scanProject = (dirPath) => {
+const scanProject = (dirPathOrTree) => {
   const result = {
     totalFiles: 0,
     controllers: [],
@@ -9,46 +8,25 @@ const scanProject = (dirPath) => {
     routes: [],
     components: [],
     pages: [],
-    middleware: []
+    middleware: [],
   };
 
-  function walk(dir) {
-    const files = fs.readdirSync(dir);
+  const tree =
+    typeof dirPathOrTree === "string"
+      ? buildFileTree(dirPathOrTree).files
+      : dirPathOrTree.files || dirPathOrTree;
 
-    for (const file of files) {
-      const fullPath = path.join(dir, file);
+  for (const file of tree) {
+    result.totalFiles++;
+    const lower = file.relativePath.toLowerCase();
 
-      const stat = fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        walk(fullPath);
-      } else {
-        result.totalFiles++;
-
-        const lower = fullPath.toLowerCase();
-
-        if (lower.includes("controller"))
-          result.controllers.push(file);
-
-        if (lower.includes("model"))
-          result.models.push(file);
-
-        if (lower.includes("route"))
-          result.routes.push(file);
-
-        if (lower.includes("component"))
-          result.components.push(file);
-
-        if (lower.includes("page"))
-          result.pages.push(file);
-
-        if (lower.includes("middleware"))
-          result.middleware.push(file);
-      }
-    }
+    if (lower.includes("controller")) result.controllers.push(file.name);
+    if (lower.includes("model")) result.models.push(file.name);
+    if (lower.includes("route")) result.routes.push(file.name);
+    if (lower.includes("component")) result.components.push(file.name);
+    if (lower.includes("page")) result.pages.push(file.name);
+    if (lower.includes("middleware")) result.middleware.push(file.name);
   }
-
-  walk(dirPath);
 
   return result;
 };
