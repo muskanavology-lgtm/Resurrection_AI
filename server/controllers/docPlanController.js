@@ -1,123 +1,212 @@
 const extractDocumentText = require("../utils/documentExtractor");
 const DocPlan = require("../models/DocPlan");
-const askAI = require("../ai/askAI");
+const OpenAI = require("openai");
 
-/*
-  NAYA FEATURE: Documentation-Only Project Planner
+function extractJSON(text) {
+  if (!text) return null;
+  try {
+    const stripped = text.replace(/```json|```/gi, "").trim();
+    return JSON.parse(stripped);
+  } catch {}
+  try {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(text.substring(start, end + 1));
+    }
+  } catch {}
+  try {
+    const match = text.match(/```json\s*([\s\S]*?)```/i);
+    if (match) return JSON.parse(match[1].trim());
+  } catch {}
+  return null;
+}
 
-  Use case: developer ke paas abhi code nahi hai, sirf ek documentation
-  file hai (requirements doc, spec, PRD, etc). Wo isko upload karta hai,
-  aur AI:
-    1. Document padhta hai
-    2. Poora project plan banata hai — kaunse modules honge, kya frontend
-       pages honge, kaunsi backend routes honge, database schema kaisa
-       hoga
-    3. Suggested file/folder structure deta hai
-    4. KUCH starter files ka actual CODE bhi likh ke deta hai (jaise Claude
-       karta hai) — explanation ke saath
+async function callAI(systemPrompt, userPrompt) {
+  const client = new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY,
+  });
+  const response = await client.chat.completions.create({
+    model: "meta-llama/llama-3.1-70b-instruct",
+    max_tokens: 6000,
+    temperature: 0.1,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+  });
+  return response.choices?.[0]?.message?.content || "";
+}
 
-  Response bahut bada ho sakta hai (LLM se), isliye JSON parsing fail hone
-  par bhi raw text fallback ke roop mein save/return hota hai — user ko
-  kabhi khaali response nahi milta.
-*/
+// Phase 1: Get project plan (structure, modules, routes, schema)
+const PLAN_PROMPT = (docText) => `
+Analyze this project documentation and return ONLY a raw JSON object. No text before or after.
 
-const PLAN_PROMPT_TEMPLATE = (docText) => `
-You are a senior software architect. A developer has shared a project
-requirements/documentation file (no code exists yet). Read it carefully and
-produce a COMPLETE project plan.
+DOCUMENTATION:
+---
+${docText.substring(0, 16000)}
+---
 
---- DOCUMENT CONTENT ---
-${docText.substring(0, 18000)}
---- END DOCUMENT ---
-
-Return ONLY valid JSON (no markdown fences, no preamble) in EXACTLY this shape:
-
+Return this exact JSON shape:
 {
-  "summary": "2-3 sentence summary of what this project is",
-  "suggestedFramework": "e.g. MERN, Laravel, Django, etc - pick the best fit",
+  "summary": "2-3 sentence project summary",
+  "suggestedFramework": "MERN or Laravel or Django etc",
   "modules": [
-    { "name": "Authentication", "description": "...", "priority": "High" }
+    { "name": "Module Name", "description": "what it does", "priority": "High" }
   ],
-  "frontendPages": ["Login Page", "Dashboard", "..."],
+  "frontendPages": ["Page1", "Page2"],
   "backendRoutes": [
-    { "method": "POST", "path": "/api/auth/login", "purpose": "..." }
+    { "method": "POST", "path": "/api/auth/login", "purpose": "User login" }
   ],
   "databaseSchema": [
-    { "table": "users", "fields": ["id", "email", "password_hash", "..."] }
+    { "table": "users", "fields": ["id", "name", "email", "password_hash", "created_at"] }
   ],
-  "suggestedFileStructure": "a markdown-style indented tree as a single string, e.g. src/\\n  controllers/\\n    authController.js\\n  models/\\n    User.js",
-  "starterCode": [
-    {
-      "filePath": "src/controllers/authController.js",
-      "language": "javascript",
-      "code": "the actual real, working starter code for this file",
-      "explanation": "what this file does and why it's structured this way"
-    }
+  "suggestedFileStructure": "project/\\n  src/\\n    controllers/\\n    models/\\n    routes/\\n  package.json",
+  "filesToGenerate": [
+    { "filePath": "src/controllers/authController.js", "language": "javascript", "purpose": "Authentication logic" },
+    { "filePath": "src/models/User.js", "language": "javascript", "purpose": "User database model" },
+    { "filePath": "src/routes/auth.js", "language": "javascript", "purpose": "Auth API routes" },
+    { "filePath": "src/middleware/auth.js", "language": "javascript", "purpose": "JWT middleware" },
+    { "filePath": "src/config/db.js", "language": "javascript", "purpose": "Database connection" },
+    { "filePath": "index.js", "language": "javascript", "purpose": "Main server entry point" }
   ]
 }
 
-Generate starterCode for the 3 most foundational files (e.g. main entry
-point, the core model, and the most important controller/route). Write
-real, runnable code — not placeholders or comments-only stubs.
-`;
+List ALL files that need to be created for a complete working project in filesToGenerate.
+`.trim();
 
-function tryParseJSON(text) {
-  if (!text) return null;
-  try {
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(cleaned);
-  } catch {
-    return null;
-  }
-}
+// Phase 2: Generate real code for each file
+const CODE_PROMPT = (plan, fileItem) => `
+You are a senior developer. Write COMPLETE, PRODUCTION-READY code for this file.
+
+PROJECT: ${plan.suggestedFramework} — ${plan.summary}
+ALL MODULES: ${plan.modules.map(m => m.name).join(", ")}
+DATABASE TABLES: ${plan.databaseSchema.map(t => t.table).join(", ")}
+ALL FILES IN PROJECT: ${plan.filesToGenerate.map(f => f.filePath).join(", ")}
+
+FILE TO WRITE:
+Path: ${fileItem.filePath}
+Language: ${fileItem.language}
+Purpose: ${fileItem.purpose}
+
+Rules:
+- Write COMPLETE working code, not stubs or TODOs
+- Include all imports/requires
+- Use proper error handling (try/catch)
+- Add brief comments for key sections
+- Follow ${plan.suggestedFramework} best practices
+- Make it production-ready quality
+
+Return ONLY the raw code. No markdown fences, no explanation text.
+`.trim();
 
 const generateProjectPlan = async (req, res) => {
   try {
+    console.log("===== Documentation Plan Request =====", req.file?.originalname);
+
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "No documentation file uploaded." });
+      return res.status(400).json({ success: false, error: "No file uploaded." });
     }
 
-    console.log("===== Documentation Plan Request =====", req.file.originalname);
-
-    const docText = await extractDocumentText(req.file.path);
-
-    if (!docText || docText.trim().length < 20) {
-      return res.status(400).json({
-        success: false,
-        error: "Couldn't extract meaningful text from this document. Try a .txt or .md file.",
-      });
+    let docText;
+    try {
+      docText = await extractDocumentText(req.file.path);
+    } catch (extractErr) {
+      return res.status(400).json({ success: false, error: extractErr.message });
     }
 
-    const aiResponse = await askAI(PLAN_PROMPT_TEMPLATE(docText));
-    const parsed = tryParseJSON(aiResponse);
+    if (!docText || docText.trim().length < 50) {
+      return res.status(400).json({ success: false, error: "Document too short to analyze." });
+    }
 
-    const docPlan = await DocPlan.create({
-      documentName: req.file.originalname,
-      uploadedFile: req.file.filename,
-      rawDocumentText: docText.substring(0, 20000),
-      generatedPlan: parsed || {},
-      rawAIResponse: parsed ? "" : aiResponse,
+    console.log(`[docPlan] Extracted ${docText.length} chars`);
+
+    // Phase 1: Get project structure plan
+    const planResponse = await callAI(
+      "You are a JSON API. Output ONLY raw valid JSON. Never write text before or after JSON.",
+      PLAN_PROMPT(docText)
+    );
+
+    console.log("[docPlan] Plan response preview:", planResponse.substring(0, 200));
+    const parsed = extractJSON(planResponse);
+
+    if (!parsed) {
+      return res.status(500).json({ success: false, error: "AI could not parse documentation. Please try again." });
+    }
+
+    const plan = {
+      summary: parsed.summary || "",
+      suggestedFramework: parsed.suggestedFramework || "Unknown",
+      modules: Array.isArray(parsed.modules) ? parsed.modules : [],
+      frontendPages: Array.isArray(parsed.frontendPages) ? parsed.frontendPages : [],
+      backendRoutes: Array.isArray(parsed.backendRoutes) ? parsed.backendRoutes : [],
+      databaseSchema: Array.isArray(parsed.databaseSchema) ? parsed.databaseSchema : [],
+      suggestedFileStructure: parsed.suggestedFileStructure || "",
+      filesToGenerate: Array.isArray(parsed.filesToGenerate) ? parsed.filesToGenerate : [],
+      starterCode: [], // will be filled in Phase 2
+    };
+
+    // Phase 2: Generate real code for each file (up to 10 files)
+    const filesToCode = plan.filesToGenerate.slice(0, 10);
+    console.log(`[docPlan] Generating code for ${filesToCode.length} files...`);
+
+    const starterCode = [];
+    for (const fileItem of filesToCode) {
+      try {
+        console.log(`[docPlan] Coding: ${fileItem.filePath}`);
+        const code = await callAI(
+          "You are a senior developer. Return ONLY raw source code. No markdown, no explanation.",
+          CODE_PROMPT(plan, fileItem)
+        );
+        starterCode.push({
+          filePath: fileItem.filePath,
+          language: fileItem.language,
+          purpose: fileItem.purpose,
+          code: code.replace(/```[\w]*/g, "").replace(/```/g, "").trim(),
+          explanation: fileItem.purpose,
+        });
+        console.log(`[docPlan] Done: ${fileItem.filePath} (${code.length} chars)`);
+      } catch (codeErr) {
+        console.error(`[docPlan] Failed: ${fileItem.filePath}:`, codeErr.message);
+        starterCode.push({
+          filePath: fileItem.filePath,
+          language: fileItem.language,
+          purpose: fileItem.purpose,
+          code: `// ${fileItem.filePath}\n// TODO: Implement ${fileItem.purpose}\n`,
+          explanation: fileItem.purpose,
+        });
+      }
+    }
+
+    plan.starterCode = starterCode;
+
+    const savedPlan = await DocPlan.create({
+      fileName: req.file.originalname,
+      generatedPlan: plan,
+      rawAIResponse: "",
     });
+
+    console.log(`[docPlan] Complete. Plan saved: ${savedPlan._id}, ${starterCode.length} files coded`);
 
     return res.json({
       success: true,
-      docPlanId: docPlan._id,
-      plan: parsed,
-      rawAnswer: parsed ? null : aiResponse, // frontend should render this as markdown if plan is null
+      docPlanId: savedPlan._id,
+      plan,
+      rawAnswer: null,
     });
   } catch (error) {
-    console.error("DOC PLAN ERROR:", error);
+    console.error("DOC PLAN ERROR:", error.message);
+    console.error(error.stack);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
 const getProjectPlan = async (req, res) => {
   try {
-    const docPlan = await DocPlan.findById(req.params.id);
-    if (!docPlan) {
-      return res.status(404).json({ success: false, message: "Plan not found" });
-    }
-    res.json({ success: true, docPlan });
+    const plan = await DocPlan.findById(req.params.id);
+    if (!plan) return res.status(404).json({ success: false, error: "Plan not found." });
+    res.json({ success: true, plan: plan.generatedPlan, docPlanId: plan._id });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

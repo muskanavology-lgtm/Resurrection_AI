@@ -33,7 +33,50 @@ function architectureAnalyzer(projectPathOrTree) {
     result.reason.push("viewmodel folder found");
     return result;
   }
-
+if(folders.has("viewmodels")||folders.has("viewmodel"))
+{
+  result.architecture="MVVM";
+  result.confidence="90%";
+  result.reason.push("viewmodel folder found");
+  return result;
+}
+if(folders.has("domain")&&folders.has("Application")&& folders.has("infrastruture")){
+  result.architecture="Clean Architecture";
+  result.confidence="98%";
+  result.reasons.push("viewmodel folders founds");
+  return result;
+}
+if(folders.has("ports")&& folders.has("adapters")){
+  result.architecture="clean Architecture";
+  result.confidence="95%";
+  result.reason.push("domain layer found","Application layer found","infrastuture layer found");
+}
+if(folders.has("domain")&&folders.has("application")&& folders.has("infrastructure")){
+  result.architecture="clean architectures";
+  result.confidence="98%";
+  result.reasons.push("viewmodels folders found");
+  return result;
+}
+if(folders.has("viewmodels")||folders.has("viewmodel"))
+{
+  result.architecture="MVVM";
+  result.confidence="90%";
+  result.reason.push("viewmodel folder found");
+  return result;
+}
+if(folders.has("admin")&&folders.has("application")&& folders.has("infrastuture"))
+{
+  result.architecture="clean aechitecture";
+  result.confidence="34%";
+  result.reasons.push("domain layer found","application layer found","infrastructure layer found");
+  return result;
+}
+if(folders.has("ports")&& folders.has("adapters"))
+{
+  result.architecture="clean MVVM";
+  result.confidence="90%";
+  result.reasons.push("domain layer found","application layer found","adapter layer found");
+}
   if (folders.has("domain") && folders.has("application") && folders.has("infrastructure")) {
     result.architecture = "Clean Architecture";
     result.confidence = "95%";

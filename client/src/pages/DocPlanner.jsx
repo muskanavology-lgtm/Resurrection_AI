@@ -1,91 +1,121 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import {
-  FiUploadCloud, FiFile, FiX, FiCheckCircle, FiDownload,
-  FiCpu, FiLayers, FiDatabase, FiCode, FiZap, FiAlertCircle
+  FiUploadCloud, FiFile, FiX, FiDownload, FiCpu, FiLayers,
+  FiDatabase, FiCode, FiZap, FiAlertCircle, FiCheckCircle,
+  FiFolder, FiChevronRight, FiClock, FiRefreshCw
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
 import axios from "axios";
-import { Panel, PageHeader, Badge, Loader } from "../components/UI";
+import { Panel, PageHeader, Badge } from "../components/UI";
 
 const PHASES = [
-  "Reading documentation",
+  "Reading your documentation",
   "Understanding project requirements",
   "Identifying modules & features",
   "Planning folder structure",
   "Designing database schema",
   "Mapping API routes",
-  "Writing starter code",
-  "Finalizing project plan",
+  "Writing AuthController code",
+  "Writing Model files",
+  "Writing Route handlers",
+  "Writing Middleware",
+  "Writing Config files",
+  "Writing Entry point",
+  "Finalizing complete project",
 ];
 
-export default function DocToProject() {
+const METHOD_COLORS = {
+  GET: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  POST: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  PUT: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  PATCH: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  DELETE: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+};
+
+const PRIORITY_TONE = { High: "critical", Medium: "medium", Low: "good" };
+
+function CodeViewer({ code, language, filePath }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+  return (
+    <div className="rounded-xl overflow-hidden border border-white/10">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/8">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <span className="h-3 w-3 rounded-full bg-rose-500/60" />
+            <span className="h-3 w-3 rounded-full bg-amber-500/60" />
+            <span className="h-3 w-3 rounded-full bg-emerald-500/60" />
+          </div>
+          <span className="mono text-xs text-slate-400 ml-2">{filePath}</span>
+        </div>
+        <button onClick={copy} className="mono text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
+          {copied ? "✓ Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="mono text-xs text-slate-200 p-5 overflow-x-auto max-h-96 bg-[#060a14] leading-relaxed">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+export default function DocPlanner() {
   const [file, setFile] = useState(null);
-  const [status, setStatus] = useState("idle"); // idle | uploading | done | error | generating
+  const [status, setStatus] = useState("idle");
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [plan, setPlan] = useState(null);
-  const [rawAnswer, setRawAnswer] = useState("");
   const [docPlanId, setDocPlanId] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState("modules");
-  const [genStatus, setGenStatus] = useState("idle"); // idle | generating | done
+  const [activeFile, setActiveFile] = useState(null);
+  const [genStatus, setGenStatus] = useState("idle");
   const phaseTimer = useRef(null);
+
+  const onDrop = useCallback((accepted, rejected) => {
+    if (rejected?.length) { setErrorMsg("Only .txt, .md, .pdf, .docx accepted."); return; }
+    if (accepted?.[0]) { setFile(accepted[0]); setErrorMsg(""); setStatus("idle"); setPlan(null); }
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     multiple: false,
+    onDrop,
     accept: {
-      "text/plain": [".txt"],
-      "text/markdown": [".md"],
+      "text/plain": [".txt"], "text/markdown": [".md"],
       "application/pdf": [".pdf"],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-    },
-    onDrop: (accepted, rejected) => {
-      if (rejected?.length) {
-        setErrorMsg("Only .txt, .md, .pdf, .docx files accepted.");
-        return;
-      }
-      if (accepted?.[0]) {
-        setFile(accepted[0]);
-        setErrorMsg("");
-        setStatus("idle");
-        setPlan(null);
-      }
     },
   });
 
   function startPhaseTimer() {
-    let i = 0;
-    setPhaseIndex(0);
+    let i = 0; setPhaseIndex(0);
     phaseTimer.current = setInterval(() => {
       i = Math.min(i + 1, PHASES.length - 1);
       setPhaseIndex(i);
-    }, 2000);
+    }, 3500);
   }
-  function stopPhaseTimer() {
-    if (phaseTimer.current) clearInterval(phaseTimer.current);
-  }
+  function stopPhaseTimer() { if (phaseTimer.current) clearInterval(phaseTimer.current); }
 
   async function handleAnalyze() {
     if (!file) return;
-    setStatus("uploading");
-    setErrorMsg("");
-    setPlan(null);
+    setStatus("loading"); setErrorMsg(""); setPlan(null);
     startPhaseTimer();
-
     try {
       const formData = new FormData();
       formData.append("document", file);
       const res = await axios.post("/api/docs/plan", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 120000,
+        timeout: 300000,
       });
       stopPhaseTimer();
-      const data = res.data;
-      if (!data.success) throw new Error(data.error || "Plan generation failed");
-      setPlan(data.plan || null);
-      setRawAnswer(data.rawAnswer || "");
-      setDocPlanId(data.docPlanId);
+      if (!res.data.success) throw new Error(res.data.error || "Failed");
+      setPlan(res.data.plan);
+      setDocPlanId(res.data.docPlanId);
+      setActiveFile(res.data.plan?.starterCode?.[0] || null);
       setStatus("done");
       setActiveTab("modules");
     } catch (err) {
@@ -95,71 +125,67 @@ export default function DocToProject() {
     }
   }
 
-  async function handleGenerateProject() {
+  async function handleDownload() {
     if (!docPlanId) return;
     setGenStatus("generating");
     try {
       const res = await axios.post(`/api/docs/generate/${docPlanId}`, {}, {
-        responseType: "blob",
-        timeout: 180000,
+        responseType: "blob", timeout: 300000,
       });
       const blob = new Blob([res.data], { type: "application/zip" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const fw = plan?.suggestedFramework?.toLowerCase().replace(/\s+/g, "-") || "project";
-      a.download = `${fw}-generated.zip`;
+      a.download = `${(plan?.suggestedFramework || "project").toLowerCase().replace(/\s+/g, "-")}-generated.zip`;
       a.click();
       URL.revokeObjectURL(url);
       setGenStatus("done");
     } catch (err) {
       setGenStatus("idle");
-      setErrorMsg("Code generation failed: " + (err?.response?.data?.error || err.message));
+      setErrorMsg("Download failed: " + (err?.response?.data?.error || err.message));
     }
   }
 
-  const busy = status === "uploading";
   const tabs = [
     { id: "modules", label: "Modules", icon: FiLayers },
-    { id: "structure", label: "File Structure", icon: FiCode },
     { id: "routes", label: "API Routes", icon: FiZap },
     { id: "database", label: "Database", icon: FiDatabase },
-    { id: "code", label: "Starter Code", icon: FiCpu },
+    { id: "structure", label: "File Structure", icon: FiFolder },
+    { id: "code", label: "Source Code", icon: FiCode },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Build from Docs"
         title="Documentation → Project"
-        subtitle="Upload any requirements doc, spec or PRD — AI reads it like a senior architect and plans the entire project with real starter code."
+        subtitle="Upload any requirements doc, SRS, PRD or specification — AI reads it like a senior architect, plans the full project, and writes real production-ready code for every file."
       />
 
-      {/* Upload Panel */}
+      {/* Upload area — only show when no plan yet */}
       {!plan && (
         <Panel className="p-8">
-          {!busy && (
+          {status !== "loading" && (
             <>
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-2xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all ${
-                  isDragActive ? "border-cyan-400 bg-cyan-500/5" : "border-white/15 hover:border-cyan-400/60"
+                className={`border-2 border-dashed rounded-2xl h-52 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                  isDragActive ? "border-cyan-400 bg-cyan-500/5" : "border-white/15 hover:border-cyan-400/50 hover:bg-white/[0.02]"
                 }`}
               >
                 <input {...getInputProps()} />
-                <FiUploadCloud size={40} className="text-cyan-400 mb-3" />
-                <p className="text-lg font-display font-semibold">
+                <FiUploadCloud size={48} className="text-cyan-400 mb-3" />
+                <p className="text-xl font-display font-semibold">
                   {isDragActive ? "Drop it here" : "Drop your documentation"}
                 </p>
-                <p className="text-slate-400 text-sm mt-1">.txt · .md · .pdf · .docx accepted</p>
+                <p className="text-slate-400 text-sm mt-2">.txt · .md · .pdf · .docx accepted</p>
               </div>
-
               {file && (
                 <div className="mt-5 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <FiFile className="text-cyan-400 shrink-0" />
+                    <FiFile className="text-cyan-400" />
                     <div>
-                      <p className="text-sm text-white">{file.name}</p>
+                      <p className="text-sm text-white font-medium">{file.name}</p>
                       <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(1)} KB</p>
                     </div>
                   </div>
@@ -167,14 +193,13 @@ export default function DocToProject() {
                     <button onClick={() => setFile(null)} className="p-2 text-slate-400 hover:text-white"><FiX /></button>
                     <button
                       onClick={handleAnalyze}
-                      className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 text-ink font-semibold text-sm"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 text-ink font-bold text-sm hover:opacity-90"
                     >
                       Analyze & Plan
                     </button>
                   </div>
                 </div>
               )}
-
               {errorMsg && (
                 <div className="mt-4 flex items-center gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-300 text-sm">
                   <FiAlertCircle className="shrink-0" /> {errorMsg}
@@ -183,249 +208,270 @@ export default function DocToProject() {
             </>
           )}
 
-          {busy && (
-            <div className="h-56 flex flex-col items-center justify-center gap-4">
-              <div className="relative h-14 w-14">
-                <div className="absolute inset-0 rounded-full border-2 border-white/10" />
-                <div className="absolute inset-0 rounded-full border-2 border-t-cyan-400 border-r-violet-400 border-transparent animate-spin" />
+          {status === "loading" && (
+            <div className="min-h-72 flex flex-col items-center justify-center gap-5">
+              <div className="relative h-16 w-16">
+                <div className="absolute inset-0 rounded-full border-[3px] border-white/10" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-cyan-400 border-r-violet-400 border-transparent animate-spin" />
               </div>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={phaseIndex}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="text-slate-300 font-medium"
-                >
-                  {PHASES[phaseIndex]}
-                </motion.p>
-              </AnimatePresence>
-              <div className="w-64 h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="text-center">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={phaseIndex}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="text-lg font-medium text-white"
+                  >
+                    {PHASES[phaseIndex]}
+                  </motion.p>
+                </AnimatePresence>
+                <p className="text-sm text-slate-400 mt-1">AI is writing real code for each file…</p>
+              </div>
+              <div className="w-80 h-1.5 rounded-full bg-white/5 overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-cyan-400 to-violet-400"
+                  className="h-full bg-gradient-to-r from-cyan-400 to-violet-400 rounded-full"
                   animate={{ width: `${((phaseIndex + 1) / PHASES.length) * 100}%` }}
-                  transition={{ ease: "easeOut" }}
+                  transition={{ ease: "easeOut", duration: 0.5 }}
                 />
               </div>
+              <p className="text-xs text-slate-500 mono">This may take 2-3 minutes — AI is coding {plan?.filesToGenerate?.length || "all"} files</p>
             </div>
           )}
         </Panel>
       )}
 
-      {/* Plan Result */}
-      {status === "done" && (plan || rawAnswer) && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {/* Header with summary + actions */}
+      {/* RESULTS */}
+      {status === "done" && plan && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+
+          {/* Summary card */}
           <Panel className="p-7">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <FiCheckCircle className="text-emerald-400" size={22} />
-                  <h2 className="text-xl font-display font-semibold text-white">
-                    Project Plan Ready
-                  </h2>
-                  {plan?.suggestedFramework && (
-                    <Badge tone="cyan">{plan.suggestedFramework}</Badge>
-                  )}
+            <div className="flex flex-wrap items-start justify-between gap-5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-3">
+                  <FiCheckCircle className="text-emerald-400 shrink-0" size={24} />
+                  <h2 className="text-2xl font-display font-bold text-white">Project Plan Ready</h2>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 text-cyan-300">
+                    {plan.suggestedFramework}
+                  </span>
                 </div>
-                {plan?.summary && (
-                  <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">{plan.summary}</p>
-                )}
+                <p className="text-slate-300 leading-relaxed">{plan.summary}</p>
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex flex-col gap-2 shrink-0">
                 <button
-                  onClick={() => { setPlan(null); setRawAnswer(""); setStatus("idle"); setDocPlanId(null); setFile(null); }}
-                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-sm hover:bg-white/10"
+                  onClick={handleDownload}
+                  disabled={genStatus === "generating"}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 text-ink font-bold text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
                 >
-                  New Document
+                  {genStatus === "generating"
+                    ? <><FiRefreshCw className="animate-spin" size={15} /> Generating ZIP…</>
+                    : genStatus === "done"
+                    ? <><FiCheckCircle size={15} /> Downloaded!</>
+                    : <><FiDownload size={15} /> Download Project ZIP</>
+                  }
                 </button>
                 <button
-                  onClick={handleGenerateProject}
-                  disabled={genStatus === "generating" || !docPlanId}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 text-ink font-semibold text-sm disabled:opacity-50"
+                  onClick={() => { setPlan(null); setStatus("idle"); setFile(null); setDocPlanId(null); }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-300 text-sm hover:bg-white/10"
                 >
-                  <FiDownload size={15} />
-                  {genStatus === "generating" ? "Generating…" : genStatus === "done" ? "Downloaded!" : "Generate & Download Project"}
+                  <FiUploadCloud size={14} /> New Document
                 </button>
               </div>
             </div>
 
-            {/* Stats row */}
-            {plan && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-                {[
-                  ["Modules", plan.modules?.length ?? 0],
-                  ["Pages", plan.frontendPages?.length ?? 0],
-                  ["API Routes", plan.backendRoutes?.length ?? 0],
-                  ["Starter Files", plan.starterCode?.length ?? 0],
-                ].map(([label, val]) => (
-                  <div key={label} className="rounded-xl bg-white/[0.04] border border-white/8 p-4 text-center">
-                    <p className="text-2xl font-display font-bold text-white">{val}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+              {[
+                ["Modules", plan.modules?.length ?? 0, "text-violet-400"],
+                ["Pages", plan.frontendPages?.length ?? 0, "text-cyan-400"],
+                ["API Routes", plan.backendRoutes?.length ?? 0, "text-emerald-400"],
+                ["DB Tables", plan.databaseSchema?.length ?? 0, "text-amber-400"],
+                ["Files Coded", plan.starterCode?.length ?? 0, "text-rose-400"],
+              ].map(([label, val, color]) => (
+                <div key={label} className="rounded-xl bg-white/[0.04] border border-white/8 p-4 text-center">
+                  <p className={`text-3xl font-display font-bold ${color}`}>{val}</p>
+                  <p className="text-xs text-slate-400 mt-1">{label}</p>
+                </div>
+              ))}
+            </div>
           </Panel>
 
-          {/* Raw fallback if JSON parse failed */}
-          {!plan && rawAnswer && (
-            <Panel className="p-7">
-              <div className="prose-ai">
-                <ReactMarkdown>{rawAnswer}</ReactMarkdown>
+          {/* Tab nav */}
+          <div className="flex gap-1 bg-white/[0.03] rounded-2xl p-1.5 border border-white/8 overflow-x-auto">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                  activeTab === id
+                    ? "bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/25 text-cyan-300"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Icon size={14} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* MODULES TAB */}
+          {activeTab === "modules" && (
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {plan.modules?.map((m, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                    <Panel className="p-5 h-full hover:border-violet-500/30 transition-colors">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-cyan-500/20 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                          <FiLayers size={16} />
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                          m.priority === "High" ? "bg-rose-500/10 text-rose-300 border-rose-500/30" :
+                          m.priority === "Medium" ? "bg-amber-500/10 text-amber-300 border-amber-500/30" :
+                          "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                        }`}>{m.priority}</span>
+                      </div>
+                      <h3 className="font-semibold text-white mb-1">{m.name}</h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">{m.description}</p>
+                    </Panel>
+                  </motion.div>
+                ))}
+              </div>
+              {plan.frontendPages?.length > 0 && (
+                <Panel className="p-6">
+                  <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-4">Frontend Pages</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {plan.frontendPages.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm">
+                        <FiChevronRight size={12} /> {p}
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
+            </div>
+          )}
+
+          {/* API ROUTES TAB */}
+          {activeTab === "routes" && (
+            <Panel className="p-6">
+              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-5">
+                Backend API Routes ({plan.backendRoutes?.length ?? 0})
+              </h3>
+              <div className="space-y-2">
+                {plan.backendRoutes?.map((r, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="flex items-center gap-4 rounded-xl border border-white/8 bg-white/[0.02] px-5 py-3.5 hover:border-white/15 transition-colors"
+                  >
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border mono min-w-[54px] text-center ${METHOD_COLORS[r.method] || "bg-white/5 text-slate-300 border-white/10"}`}>
+                      {r.method}
+                    </span>
+                    <span className="mono text-sm text-white flex-1">{r.path}</span>
+                    <span className="text-xs text-slate-400 hidden sm:block">{r.purpose}</span>
+                  </motion.div>
+                ))}
               </div>
             </Panel>
           )}
 
-          {plan && (
-            <>
-              {/* Tab nav */}
-              <div className="flex gap-1 bg-white/[0.03] rounded-2xl p-1.5 border border-white/8 overflow-x-auto">
-                {tabs.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                      activeTab === id
-                        ? "bg-gradient-to-r from-cyan-500/20 to-violet-500/20 border border-cyan-500/25 text-cyan-300"
-                        : "text-slate-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <Icon size={14} /> {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Modules tab */}
-              {activeTab === "modules" && (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {plan.modules?.map((m, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <Panel className="p-5 h-full">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold text-white text-sm">{m.name}</h3>
-                          <Badge tone={m.priority === "High" ? "critical" : m.priority === "Medium" ? "medium" : "good"}>
-                            {m.priority}
-                          </Badge>
+          {/* DATABASE TAB */}
+          {activeTab === "database" && (
+            <div className="grid sm:grid-cols-2 gap-5">
+              {plan.databaseSchema?.map((table, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
+                  <Panel className="p-5">
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <FiDatabase size={14} />
+                      </div>
+                      <h3 className="font-semibold text-white mono">{table.table}</h3>
+                    </div>
+                    <div className="space-y-1.5">
+                      {table.fields?.map((f, j) => (
+                        <div key={j} className="flex items-center gap-2 text-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/60 shrink-0" />
+                          <span className="mono text-slate-300">{f}</span>
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed">{m.description}</p>
-                      </Panel>
-                    </motion.div>
-                  ))}
-                  {/* Frontend pages */}
-                  {plan.frontendPages?.length > 0 && (
-                    <Panel className="p-5 sm:col-span-2">
-                      <h3 className="font-semibold text-white text-sm mb-3">Frontend Pages</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {plan.frontendPages.map((p, i) => (
-                          <Badge key={i} tone="violet">{p}</Badge>
-                        ))}
-                      </div>
-                    </Panel>
-                  )}
-                </div>
-              )}
-
-              {/* File structure tab */}
-              {activeTab === "structure" && (
-                <Panel className="p-6">
-                  <h3 className="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">
-                    Suggested Folder / File Structure
-                  </h3>
-                  {plan.suggestedFileStructure ? (
-                    <pre className="mono text-xs text-slate-200 leading-relaxed bg-black/30 rounded-xl p-5 overflow-x-auto whitespace-pre-wrap">
-                      {plan.suggestedFileStructure}
-                    </pre>
-                  ) : (
-                    <p className="text-slate-500 text-sm">No structure generated.</p>
-                  )}
-                </Panel>
-              )}
-
-              {/* API Routes tab */}
-              {activeTab === "routes" && (
-                <Panel className="p-6">
-                  <h3 className="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">
-                    Backend API Routes ({plan.backendRoutes?.length ?? 0})
-                  </h3>
-                  <div className="space-y-2.5">
-                    {plan.backendRoutes?.map((r, i) => (
-                      <div key={i} className="flex items-start gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-4">
-                        <Badge tone={r.method === "GET" ? "cyan" : r.method === "POST" ? "good" : r.method === "DELETE" ? "critical" : "medium"}>
-                          {r.method}
-                        </Badge>
-                        <div>
-                          <p className="mono text-sm text-white">{r.path}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{r.purpose}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {(!plan.backendRoutes || plan.backendRoutes.length === 0) && (
-                      <p className="text-slate-500 text-sm">No routes in plan.</p>
-                    )}
-                  </div>
-                </Panel>
-              )}
-
-              {/* Database tab */}
-              {activeTab === "database" && (
-                <div className="space-y-4">
-                  {plan.databaseSchema?.map((table, i) => (
-                    <Panel key={i} className="p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FiDatabase className="text-violet-400" />
-                        <h3 className="font-semibold text-white">{table.table}</h3>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {table.fields?.map((f, j) => (
-                          <span key={j} className="mono text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300">
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    </Panel>
-                  ))}
-                  {(!plan.databaseSchema || plan.databaseSchema.length === 0) && (
-                    <Panel className="p-8 text-center text-slate-500 text-sm">No database schema in plan.</Panel>
-                  )}
-                </div>
-              )}
-
-              {/* Starter Code tab */}
-              {activeTab === "code" && (
-                <div className="space-y-5">
-                  {plan.starterCode?.map((f, i) => (
-                    <Panel key={i} className="p-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FiCode className="text-cyan-400 shrink-0" />
-                        <span className="mono text-sm text-slate-200">{f.filePath}</span>
-                        {f.language && <Badge tone="default">{f.language}</Badge>}
-                      </div>
-                      {f.explanation && (
-                        <p className="text-xs text-slate-400 mb-3 leading-relaxed">{f.explanation}</p>
-                      )}
-                      {f.code ? (
-                        <pre className="mono text-xs text-slate-200 bg-black/40 rounded-xl p-4 overflow-x-auto max-h-72">
-                          {f.code}
-                        </pre>
-                      ) : (
-                        <p className="text-xs text-slate-500 italic">Code will be generated when you download the project.</p>
-                      )}
-                    </Panel>
-                  ))}
-                  {(!plan.starterCode || plan.starterCode.length === 0) && (
-                    <Panel className="p-8 text-center text-slate-500 text-sm">No starter files generated yet.</Panel>
-                  )}
-                </div>
-              )}
-            </>
+                      ))}
+                    </div>
+                  </Panel>
+                </motion.div>
+              ))}
+            </div>
           )}
 
+          {/* FILE STRUCTURE TAB */}
+          {activeTab === "structure" && (
+            <Panel className="p-6">
+              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-5">
+                Complete Folder Structure
+              </h3>
+              <pre className="mono text-sm text-slate-200 bg-black/30 rounded-xl p-6 overflow-x-auto leading-relaxed whitespace-pre-wrap">
+                {plan.suggestedFileStructure || "No structure generated."}
+              </pre>
+            </Panel>
+          )}
+
+          {/* SOURCE CODE TAB */}
+          {activeTab === "code" && (
+            <div className="flex gap-5">
+              {/* File list sidebar */}
+              <div className="w-64 shrink-0">
+                <Panel className="p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 mb-2 px-2">Files Generated</p>
+                  <div className="space-y-1">
+                    {plan.starterCode?.map((f, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveFile(f)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-all ${
+                          activeFile?.filePath === f.filePath
+                            ? "bg-cyan-500/15 border border-cyan-500/25 text-cyan-300"
+                            : "text-slate-400 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        <p className="mono truncate">{f.filePath.split("/").pop()}</p>
+                        <p className="text-slate-500 truncate mt-0.5">{f.filePath}</p>
+                      </button>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+
+              {/* Code viewer */}
+              <div className="flex-1 min-w-0 space-y-4">
+                {activeFile ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <FiCode className="text-cyan-400" />
+                      <span className="mono text-sm text-slate-200">{activeFile.filePath}</span>
+                      <Badge tone="cyan">{activeFile.language}</Badge>
+                    </div>
+                    {activeFile.explanation && (
+                      <Panel className="p-4">
+                        <p className="text-sm text-slate-300 leading-relaxed">{activeFile.explanation}</p>
+                      </Panel>
+                    )}
+                    <CodeViewer
+                      code={activeFile.code}
+                      language={activeFile.language}
+                      filePath={activeFile.filePath}
+                    />
+                  </>
+                ) : (
+                  <Panel className="p-12 text-center text-slate-500">
+                    Select a file to view its code
+                  </Panel>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error below results */}
           {errorMsg && (
             <div className="flex items-center gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-300 text-sm">
               <FiAlertCircle className="shrink-0" /> {errorMsg}

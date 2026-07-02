@@ -18,11 +18,13 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "mammoth": "^1.12.0",
     "mongodb": "7.2",
     "mongoose": "^9.7.1",
     "mongose": "^0.0.2-security",
     "multer": "^2.2.0",
     "openai": "^6.43.0",
+    "pdf-parse": "^2.4.5",
     "simple-git": "^3.36.0",
     "unzipper": "^0.12.3"
   },
