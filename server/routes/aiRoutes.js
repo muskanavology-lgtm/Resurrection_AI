@@ -2,27 +2,21 @@ const express = require("express");
 const router = express.Router();
 const askAI = require("../ai/askAI");
 const repoSessions = {};
-
 const RepoChat = require("../models/RepoChat");
-
 router.post("/repo-chat", async (req, res) => {
   try {
     const { sessionId, question, scanResult, dependencyGraph } = req.body;
-
     if (!sessionId || !question) {
       return res.status(400).json({
         success: false,
         error: "sessionId and question required",
       });
     }
-    // 1. Get or create session
     let chat = await RepoChat.findOne({ sessionId });
-
     if (!chat) {
       chat = new RepoChat({
         sessionId:Date.now(),
         messages: [],
-     
       });
     }
     const prompt = `You are an expert software architect analyzing a full repository.
@@ -45,20 +39,13 @@ Rules:
 - Explain execution flow
 - Think like GitHub Copilot Chat
 `;
-
     const answer = await askAI(prompt);
-
-    // 2. Save memory in DB
     chat.messages.push(
       { role: "user", content: question },
       { role: "assistant", content: answer }
     );
-
     await chat.save();
-console.log(
-  "Saving chat...",
-  chat.messages.length
-);
+    console.log("Saving chat...",chat.messages.length);
     return res.json({
       success: true,
       answer,
@@ -74,17 +61,13 @@ console.log(
 router.post("/explain-file", async (req, res) => {
   try {
     const { file, scanResult, dependencyGraph } = req.body;
-
     if (!file) {
       return res.status(400).json({
         success: false,
         error: "file is required",
       });
     }
-
-    const prompt = `
-You are analyzing ONE specific file from a project.
-
+    const prompt = `You are analyzing ONE specific file from a project.
 FILE NAME:
 ${file}
 
@@ -106,11 +89,8 @@ Explain ONLY this file in deep detail:
 7. Security issues
 8. Improvements
 
-Make it very simple and developer friendly.
-`;
-
+Make it very simple and developer friendly.`;
     const answer = await askAI(prompt);
-
     return res.json({
       success: true,
       file,
@@ -126,10 +106,7 @@ Make it very simple and developer friendly.
 router.post("/explain-file", async (req, res) => {
   try {
     const { file, scanResult, dependencyGraph } = req.body;
-
-    const prompt = `
-Explain this file in detail:
-
+    const prompt = `Explain this file in detail:
 FILE:
 ${file}
 
