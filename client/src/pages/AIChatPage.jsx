@@ -19,7 +19,6 @@ export default function AIChatPage() {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setQuestion("");
-
     try {
       const res = await axios.post("http://localhost:5000/api/ai/repo-chat", {
         sessionId: projectId,

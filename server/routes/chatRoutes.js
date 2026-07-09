@@ -13,27 +13,19 @@ router.post("/repo-chat", async (req, res) => {
         message: "Missing dynamic workspace context attributes (sessionId/question)."
       });
     }
-
-    // 1. Fetch current active project details directly from Database
     const project = await Project.findById(sessionId);
-
     if (!project) {
       return res.status(404).json({
         success: false,
         message: "Target directory configuration space not found in database registry."
       });
     }
-
-    // 2. Extract technical meta-parameters parsed during upload
     const techStack = project.techStack || "Not Specified";
     const coreFramework = project.framework || "Unknown Core Archetype";
     const routesRegistered = JSON.stringify(project.routes || [], null, 2);
     const codeAnalysisSummary = JSON.stringify(project.scanResult || {}, null, 2);
     const architecturalBlueprint = project.documentation || "No structural breakdown indexed.";
-
-    // 3. Ultra-Strict Senior Core Engineer Prompt Matrix
-    const systemIsolationPrompt = `
-You are an Advanced Technical Lead and Repository Intelligence Executive. 
+    const systemIsolationPrompt = `You are an Advanced Technical Lead and Repository Intelligence Executive. 
 Your core responsibility is to answer the user's questions about the uploaded codebase with absolute architectural accuracy.
 
 --- CRITICAL BOUNDARY RULES: DO NOT VIOLATE ---
@@ -52,21 +44,15 @@ ${routesRegistered}
 ${codeAnalysisSummary}
 - Extracted Architecture Documentation:
 ${architecturalBlueprint}
-
 --- USER REQUEST ---
 Question: "${question}"
-
 Analyze the context tree metadata accurately and provide a pinpoint, production-grade response addressing the question directly.
 `;
-
-    // 4. Hit AI Engine with Context-Locked Parameters
     const aiAnswer = await askAI(systemIsolationPrompt);
-
     return res.json({
       success: true,
       answer: aiAnswer
     });
-
   } catch (error) {
     console.error("AI Context Layer Execution Crash:", error);
     return res.status(500).json({
@@ -75,5 +61,4 @@ Analyze the context tree metadata accurately and provide a pinpoint, production-
     });
   }
 });
-
 module.exports = router;

@@ -2,9 +2,6 @@ const express = require("express");
 const router = express.Router();
 const Project = require("../models/Project");
 const askAI = require("../ai/askAI");
-
-
-
 const MAX_ROUTES_LISTED = 60;
 const MAX_DEPENDENCY_FILES_LISTED = 80;
 const MAX_PROMPT_CHARS = 60000; 
@@ -21,7 +18,6 @@ function summarizeDependencyGraph(dependencyGraph = {}) {
     mostConnectedFiles: sorted,
   };
 }
-
 function summarizeRoutes(routes = []) {
   return {
     totalRoutes: routes.length,
@@ -33,8 +29,7 @@ function buildCompactPrompt({ analysis, scanResult, routes, dependencyGraph, fea
   const routeSummary = summarizeRoutes(routes);
   const depSummary = summarizeDependencyGraph(dependencyGraph);
 
-  let prompt = `
-You are a Senior Software Architect reviewing a real codebase to plan a new feature.
+  let prompt = `You are a Senior Software Architect reviewing a real codebase to plan a new feature.
 PROJECT TYPE: ${analysis?.framework || analysis?.architecture || "Unknown"}
 LANGUAGES: ${(analysis?.languages || []).join(", ") || "Unknown"}
 FRONTEND: ${(analysis?.frontend || []).join(", ") || "none detected"}

@@ -29,7 +29,6 @@ function shortLabel(label, fallbackId) {
   const parts = raw.split(/[/\\]/).filter(Boolean);
   return parts[parts.length - 1] || raw;
 }
-
 export default function KnowledgeGraph() {
   const { activeProjectId } = useActiveProject();
   const [graph, setGraph] = useState(null);

@@ -1,46 +1,46 @@
-.hero-bg{
+.hero-bg {
 
-position:relative;
-overflow:hidden;
-
-}
-
-.hero-bg::before{
-
-content:"";
-
-position:absolute;
-
-width:600px;
-height:600px;
-
-background:#00E5FF;
-
-filter:blur(180px);
-
-opacity:.15;
-
-top:-200px;
-left:-200px;
+    position: relative;
+    overflow: hidden;
 
 }
 
-.hero-bg::after{
+.hero-bg::before {
 
-content:"";
+    content: "";
 
-position:absolute;
+    position: absolute;
 
-width:600px;
-height:600px;
+    width: 600px;
+    height: 600px;
 
-background:#8B5CF6;
+    background: #00E5FF;
 
-filter:blur(180px);
+    filter: blur(180px);
 
-opacity:.15;
+    opacity: .15;
 
-bottom:-200px;
-right:-200px;
+    top: -200px;
+    left: -200px;
+
+}
+
+.hero-bg::after {
+
+    content: "";
+
+    position: absolute;
+
+    width: 600px;
+    height: 600px;
+
+    background: #8B5CF6;
+
+    filter: blur(180px);
+
+    opacity: .15;
+
+    bottom: -200px;
+    right: -200px;
 
 }

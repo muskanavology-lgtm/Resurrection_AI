@@ -37,7 +37,6 @@ async function generateProjectFiles(req, res) {
     if (!plan || !plan.starterCode || plan.starterCode.length === 0) {
       return res.status(400).json({ success: false, error: "No starter files in plan. Re-upload documentation." });
     }
-
     const projectName = (plan.suggestedFramework || "project").toLowerCase().replace(/\s+/g, "-");
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `resurrection-${projectName}-`));
     console.log(`[codeGen] Generating in ${tmpDir}`);

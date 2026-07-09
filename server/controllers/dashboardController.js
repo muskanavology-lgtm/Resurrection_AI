@@ -11,8 +11,6 @@ const getDashboard = async (req, res) => {
         message: "Project not found"
       });
     }
-
-    // Direct pura project object ya specific wrapper return kijiye jo structured ho
     return res.json({
       success: true,
       projectName: project.projectName,

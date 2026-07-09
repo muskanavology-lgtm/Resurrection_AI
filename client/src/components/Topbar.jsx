@@ -28,8 +28,13 @@ export default function Topbar() {
         <span className="mono text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-slate-400">
           v2.4
         </span>
-        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500" />
-      </div>
+       <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center p-[2px] overflow-hidden">
+  <div className="w-full h-full rounded-full bg-[#0b0f19] flex items-center justify-center overflow-hidden">
+      <img 
+            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFmwWIkVV6qpZOQkuGKN2jBzNrBeZJoY6_S8hWsfN70A&s=10g"alt="User Logo" className="h-full w-full object-cover"
+          />
+          </div>
+          </div></div>
     </header>
   );
 }

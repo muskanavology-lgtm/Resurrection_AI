@@ -1,15 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-
-/**
- * Fetches data via the given async fetcher function whenever projectId changes.
- * fetcher: (id) => Promise<axiosResponse>
- * Returns { data, loading, error, refetch }
- */
 export function useProjectData(fetcher, projectId, deps = []) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const load = useCallback(async () => {
     if (!projectId) {
       setLoading(false);
@@ -26,9 +19,7 @@ export function useProjectData(fetcher, projectId, deps = []) {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, ...deps]);
-
   useEffect(() => {
     load();
   }, [load]);
